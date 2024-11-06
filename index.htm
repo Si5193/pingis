@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Pong Rankings</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Login Section -->
+        <div id="loginSection" class="section login-container">
+            <div class="login-box">
+                <div class="logo">
+                    <i class="fas fa-table-tennis-paddle-ball"></i>
+                    <h1>Ping Pong Rankings</h1>
+                </div>
+                <div class="form-group">
+                    <div class="input-group">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder="Email" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="Lösenord" required>
+                    </div>
+                    <button id="loginBtn" class="gradient-btn">
+                        <span>Logga in</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                <p id="loginError" class="error"></p>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div id="gameSection" class="section dashboard hidden">
+            <nav class="top-bar">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="playerName"></span>
+                </div>
+                <button id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logga ut
+                </button>
+            </nav>
+
+            <div class="dashboard-grid">
+                <!-- Statistics Cards -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Dina poäng</h3>
+                            <span id="playerPoints">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-medal"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Din ranking</h3>
+                            <span id="playerRank">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Registration -->
+                <div class="card result-card">
+                    <h2>Registrera dagens resultat</h2>
+                    <div class="score-inputs">
+                        <div class="input-container">
+                            <label>Vinster</label>
+                            <input type="number" id="wins" min="0" value="0">
+                            <div class="input-controls">
+                                <button class="ctrl-btn" onclick="adjustValue('wins', 1)">+</button>
+                                <button class="ctrl-btn" onclick="adjustValue('wins', -1)">-</button>
+                            </div>
+                        </div>
+                        <div class="input-container">
+                            <label>Förluster</label>
+                            <input type="number" id="losses" min="0" value="0">
+                            <div class="input-controls">
+                                <button class="ctrl-btn" onclick="adjustValue('losses', 1)">+</button>
+                                <button class="ctrl-btn" onclick="adjustValue('losses', -1)">-</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="submitResults" class="gradient-btn">
+                        <i class="fas fa-save"></i>
+                        Spara resultat
+                    </button>
+                </div>
+
+                <!-- Rankings Table -->
+                <div class="card ranking-card">
+                    <h2>Ranking</h2>
+                    <div class="table-container">
+                        <table id="rankingTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Spelare</th>
+                                    <th>Poäng</th>
+                                    <th>V/F</th>
+                                    <th>Vinst%</th>
+                                    <th>Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rankingBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
