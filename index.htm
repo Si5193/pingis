@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Svedbergs GIF div6 träningsranking</title>
+    <title>Svedbergs GIF - DIV 6 ranking</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="chat.css">
+    <link rel="stylesheet" href="training.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -14,7 +17,7 @@
             <div class="login-box">
                 <div class="logo">
                     <i class="fas fa-table-tennis-paddle-ball"></i>
-                    <h1>Svedbergs GIF träningsranking</h1>
+                    <h1>Ranking Svedbergs GIF</h1>
                 </div>
                 <div class="form-group">
                     <div class="input-group">
@@ -70,6 +73,121 @@
                     </div>
                 </div>
 
+                <div class="card training-card">
+                    <h2>Träningslogg</h2>
+                    <div class="training-status">
+                        <div class="status-indicator" id="trainingStatus">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Ej aktiv</span>
+                        </div>
+                        <div class="training-timer" id="trainingTimer">00:00:00</div>
+                    </div>
+                    
+                    <div class="training-controls">
+                        <button id="checkInBtn" class="gradient-btn">
+                            <i class="fas fa-play"></i>
+                            Stämpla in
+                        </button>
+                        <button id="checkOutBtn" class="gradient-btn hidden">
+                            <i class="fas fa-stop"></i>
+                            Stämpla ut
+                        </button>
+                    </div>
+                
+                    <!-- Utvärderingsformulär (visas vid utstämpling) -->
+                    <div id="trainingEvaluation" class="evaluation-form hidden">
+                        <h3>Utvärdera träningen</h3>
+                        
+                        <div class="evaluation-section">
+                            <h4>Vad fungerade bra idag?</h4>
+                            <div class="technique-grid">
+                                <label class="technique-item">
+                                    <input type="checkbox" name="goodTechniques" value="forehand">
+                                    <span>Forehand</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="goodTechniques" value="backhand">
+                                    <span>Backhand</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="goodTechniques" value="serve">
+                                    <span>Serve</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="goodTechniques" value="return">
+                                    <span>Returnering</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="goodTechniques" value="footwork">
+                                    <span>Fotarbete</span>
+                                </label>
+                            </div>
+                            <textarea id="goodNotes" placeholder="Anteckningar om vad som gick bra..."></textarea>
+                        </div>
+                
+                        <div class="evaluation-section">
+                            <h4>Vad behöver förbättras?</h4>
+                            <div class="technique-grid">
+                                <label class="technique-item">
+                                    <input type="checkbox" name="improveTechniques" value="forehand">
+                                    <span>Forehand</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="improveTechniques" value="backhand">
+                                    <span>Backhand</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="improveTechniques" value="serve">
+                                    <span>Serve</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="improveTechniques" value="return">
+                                    <span>Returnering</span>
+                                </label>
+                                <label class="technique-item">
+                                    <input type="checkbox" name="improveTechniques" value="footwork">
+                                    <span>Fotarbete</span>
+                                </label>
+                            </div>
+                            <textarea id="improveNotes" placeholder="Anteckningar om vad som behöver förbättras..."></textarea>
+                        </div>
+                
+                        <button id="submitEvaluation" class="gradient-btn">
+                            <i class="fas fa-save"></i>
+                            Spara utvärdering
+                        </button>
+                    </div>
+                
+                    <!-- Träningsstatistik -->
+                    <div class="training-stats">
+                        <h3>Träningstimmar topplista</h3>
+                        <table id="trainingTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Spelare</th>
+                                    <th>Timmar totalt</th>
+                                    <th>Denna månad</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trainingBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Statistics Visualization -->
+<div class="card stats-visualization-card">
+    <h2>Din Utveckling</h2>
+    <div class="stats-grid">
+        <div class="chart-container">
+            <canvas id="winRateChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="progressChart"></canvas>
+        </div>
+    </div>
+</div>
+
                 <!-- Result Registration -->
                 <div class="card result-card">
                     <h2>Registrera dagens resultat</h2>
@@ -97,6 +215,26 @@
                     </button>
                 </div>
 
+                <!-- Match Schedule -->
+                <div class="card match-card">
+                    <h2>
+                        <i class="fas fa-table-tennis-paddle-ball"></i>
+                        Svedbergs GIF DIV6 Matcher
+                    </h2>
+                    <div id="nextMatch" class="next-match">
+                        <!-- Next match content -->
+                    </div>
+                    <div class="match-toggle">
+                        <button id="toggleMatches" class="text-btn">
+                            <span>Visa alla matcher</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div id="allMatches" class="all-matches hidden">
+                        <!-- All matches content -->
+                    </div>
+                </div>
+
                 <!-- Rankings Table -->
                 <div class="card ranking-card">
                     <h2>Ranking</h2>
@@ -116,9 +254,43 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Chat System -->
+<!-- Ersätt den befintliga chat-card sektionen i din index.html -->
+<!-- Chat System -->
+<div class="card chat-card">
+    <h2>Teamchatt</h2>
+    <div class="chat-tabs">
+        <button class="tab-btn active" data-tab="team">Team</button>
+        <button class="tab-btn" data-tab="notes">Anteckningar</button>
+    </div>
+    <div class="chat-container">
+        <div id="chatMessages" class="chat-messages"></div>
+        
+        <!-- Emoji Picker -->
+        <div id="emojiPicker" class="emoji-picker hidden">
+            <div class="emoji-categories">
+                <button data-category="smileys">😊</button>
+                <button data-category="sports">⚽</button>
+                <button data-category="objects">💡</button>
             </div>
+            <div class="emoji-list"></div>
+        </div>
+
+        <div class="chat-input">
+            <button id="toggleEmoji" class="input-btn">
+                <i class="fas fa-smile"></i>
+            </button>
+            <input type="text" id="messageInput" placeholder="Skriv ett meddelande...">
+            <button id="markImportant" class="input-btn" title="Spara som anteckning">
+                <i class="fas fa-bookmark"></i>
+            </button>
+            <button id="sendMessage" class="gradient-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </div>
     </div>
+</div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
@@ -126,5 +298,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
     
     <script src="script.js"></script>
+    <script src="stats.js"></script>
+    <script src="chat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="training.js"></script>
 </body>
 </html>
