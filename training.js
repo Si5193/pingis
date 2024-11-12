@@ -5,6 +5,7 @@ class TrainingManager {
         this.timerInterval = null;
         this.isTraining = false;
         this.setupEventListeners();
+        this.checkActiveSession();
         this.loadTrainingStats();
     }
 
@@ -27,29 +28,96 @@ class TrainingManager {
         this.statusText = this.statusIndicator.querySelector('.status-text');
     }
 
+    async checkActiveSession() {
+        try {
+            const activeSession = await db.collection('trainingSessions')
+                .where('userId', '==', currentUser.uid)
+                .where('status', '==', 'active')
+                .orderBy('startTime', 'desc')
+                .limit(1)
+                .get();
+
+            if (!activeSession.empty) {
+                const session = activeSession.docs[0];
+                this.currentTrainingId = session.id;
+                this.trainingStartTime = session.data().startTime.toDate();
+                this.isTraining = true;
+                
+                // Resume timer
+                this.statusDot.classList.add('active');
+                this.statusText.textContent = 'Aktiv träning';
+                this.checkInBtn.classList.add('hidden');
+                this.checkOutBtn.classList.remove('hidden');
+                this.startTimer();
+            }
+        } catch (error) {
+            console.error('Error checking active session:', error);
+        }
+    }
+
     setupEventListeners() {
         this.checkInBtn.addEventListener('click', () => this.startTraining());
         this.checkOutBtn.addEventListener('click', () => this.endTraining());
         this.submitEvalBtn.addEventListener('click', () => this.submitEvaluation());
+
+        // Spara utvärdering när användaren trycker Enter i textfälten
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.submitEvaluation();
+                }
+            });
+        });
     }
 
-    startTraining() {
+    async startTraining() {
         if (this.isTraining) return;
 
-        this.isTraining = true;
-        this.trainingStartTime = new Date();
-        
-        // Update UI
-        this.statusDot.classList.add('active');
-        this.statusText.textContent = 'Aktiv träning';
-        this.checkInBtn.classList.add('hidden');
-        this.checkOutBtn.classList.remove('hidden');
-        
-        // Start timer
-        this.startTimer();
-        
-        // Save training start in Firebase
-        this.saveTrainingStart();
+        try {
+            const now = firebase.firestore.Timestamp.now();
+            
+            // Kolla om det finns en träning samma dag
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            
+            const existingSession = await db.collection('trainingSessions')
+                .where('userId', '==', currentUser.uid)
+                .where('startTime', '>=', todayStart)
+                .orderBy('startTime', 'desc')
+                .get();
+
+            if (!existingSession.empty) {
+                if (!confirm('Du har redan tränat idag. Vill du starta en ny träning?')) {
+                    return;
+                }
+            }
+
+            // Starta ny träning
+            const trainingRef = await db.collection('trainingSessions').add({
+                userId: currentUser.uid,
+                userName: currentUserData.name,
+                startTime: now,
+                status: 'active',
+                date: todayStart
+            });
+            
+            this.currentTrainingId = trainingRef.id;
+            this.trainingStartTime = now.toDate();
+            this.isTraining = true;
+            
+            // Uppdatera UI
+            this.statusDot.classList.add('active');
+            this.statusText.textContent = 'Aktiv träning';
+            this.checkInBtn.classList.add('hidden');
+            this.checkOutBtn.classList.remove('hidden');
+            
+            this.startTimer();
+            showNotification('Träning startad!', 'success');
+        } catch (error) {
+            console.error('Error starting training:', error);
+            showNotification('Ett fel uppstod vid start av träning', 'error');
+        }
     }
 
     endTraining() {
@@ -58,13 +126,13 @@ class TrainingManager {
         this.isTraining = false;
         clearInterval(this.timerInterval);
         
-        // Update UI
+        // Uppdatera UI
         this.statusDot.classList.remove('active');
         this.statusText.textContent = 'Ej aktiv';
         this.checkInBtn.classList.remove('hidden');
         this.checkOutBtn.classList.add('hidden');
         
-        // Show evaluation form
+        // Visa utvärderingsformulär
         this.evaluationForm.classList.remove('hidden');
     }
 
@@ -84,22 +152,6 @@ class TrainingManager {
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    async saveTrainingStart() {
-        try {
-            const trainingRef = await db.collection('trainingSessions').add({
-                userId: currentUser.uid,
-                userName: currentUserData.name,
-                startTime: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'active'
-            });
-            
-            this.currentTrainingId = trainingRef.id;
-        } catch (error) {
-            console.error('Error saving training start:', error);
-            showNotification('Ett fel uppstod vid start av träning', 'error');
-        }
-    }
-
     async submitEvaluation() {
         if (!this.currentTrainingId) return;
 
@@ -107,17 +159,16 @@ class TrainingManager {
             const endTime = firebase.firestore.FieldValue.serverTimestamp();
             const duration = new Date() - this.trainingStartTime;
             
-            // Get selected techniques
+            // Hämta valda tekniker
             const goodTechniques = Array.from(document.querySelectorAll('input[name="goodTechniques"]:checked'))
                 .map(cb => cb.value);
             const improveTechniques = Array.from(document.querySelectorAll('input[name="improveTechniques"]:checked'))
                 .map(cb => cb.value);
             
-            // Get notes
-            const goodNotes = document.getElementById('goodNotes').value;
-            const improveNotes = document.getElementById('improveNotes').value;
+            const goodNotes = document.getElementById('goodNotes').value.trim();
+            const improveNotes = document.getElementById('improveNotes').value.trim();
 
-            // Update training session
+            // Uppdatera träningspasset
             await db.collection('trainingSessions').doc(this.currentTrainingId).update({
                 endTime: endTime,
                 duration: duration,
@@ -130,13 +181,24 @@ class TrainingManager {
                 }
             });
 
-            // Update user's total training time
-            await db.collection('players').doc(currentUserData.id).update({
-                totalTrainingTime: firebase.firestore.FieldValue.increment(duration),
-                monthlyTrainingTime: firebase.firestore.FieldValue.increment(duration)
+            // Uppdatera tekniker i spelarens statistik
+            const techniqueUpdates = {};
+            goodTechniques.forEach(technique => {
+                techniqueUpdates[`techniques.${technique}.good`] = firebase.firestore.FieldValue.increment(1);
+            });
+            improveTechniques.forEach(technique => {
+                techniqueUpdates[`techniques.${technique}.improve`] = firebase.firestore.FieldValue.increment(1);
             });
 
-            // Reset form and hide
+            // Uppdatera spelarens totala träningstid
+            await db.collection('players').doc(currentUserData.id).update({
+                totalTrainingTime: firebase.firestore.FieldValue.increment(duration),
+                monthlyTrainingTime: firebase.firestore.FieldValue.increment(duration),
+                lastTrainingDate: firebase.firestore.FieldValue.serverTimestamp(),
+                ...techniqueUpdates
+            });
+
+            // Återställ formulär och dölj
             this.evaluationForm.classList.add('hidden');
             this.resetEvaluationForm();
             this.loadTrainingStats();
@@ -159,6 +221,7 @@ class TrainingManager {
         try {
             const snapshot = await db.collection('players')
                 .orderBy('totalTrainingTime', 'desc')
+                .orderBy('name', 'asc')
                 .get();
 
             this.trainingBody.innerHTML = '';
@@ -169,14 +232,16 @@ class TrainingManager {
                 const monthlyHours = this.formatHours(data.monthlyTrainingTime || 0);
                 
                 const row = document.createElement('tr');
+                const isCurrentUser = doc.id === currentUserData.id;
+                
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td>${data.name}</td>
+                    <td>${data.name}${isCurrentUser ? ' (Du)' : ''}</td>
                     <td>${totalHours}</td>
                     <td>${monthlyHours}</td>
                 `;
                 
-                if (doc.id === currentUserData.id) {
+                if (isCurrentUser) {
                     row.classList.add('highlight');
                 }
                 
@@ -211,11 +276,17 @@ function setupMonthlyReset() {
 
     setTimeout(async () => {
         try {
-            const snapshot = await db.collection('players').get();
             const batch = db.batch();
+            const snapshot = await db.collection('players')
+                .orderBy('monthlyTrainingTime', 'desc')
+                .orderBy('name', 'asc')
+                .get();
             
             snapshot.docs.forEach(doc => {
-                batch.update(doc.ref, { monthlyTrainingTime: 0 });
+                batch.update(doc.ref, { 
+                    monthlyTrainingTime: 0,
+                    lastMonthTrainingTime: doc.data().monthlyTrainingTime || 0
+                });
             });
             
             await batch.commit();
